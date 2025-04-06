@@ -1,29 +1,30 @@
 const express = require('express');
-     const cors = require('cors');
-     const connectDB = require('./config/db');
-     require('dotenv').config();
+  const cors = require('cors');
+  const connectDB = require('./config/db');
+  const authRoutes = require('./routes/auth');
+  const adminRoutes = require('./routes/admin');
+  const ownerRoutes = require('./routes/owner');
+  const trainerRoutes = require('./routes/trainer');
+  const customerRoutes = require('./routes/customer');
+  const notificationRoutes = require('./routes/notifications');
+  require('dotenv').config(); // Load environment variables from .env
 
-     const app = express();
+  const app = express();
 
-     // Connect to MongoDB
-     connectDB();
+  // Connect to MongoDB
+  connectDB();
 
-     // Middleware
-     app.use(cors());
-     app.use(express.json());
+  // Middleware
+  app.use(cors());
+  app.use(express.json());
 
-     // Routes
-     app.use('/api/auth', require('./routes/auth'));
-     app.use('/api/admin', require('./routes/admin'));
-     app.use('/api/owner', require('./routes/owner'));
-     app.use('/api/trainer', require('./routes/trainer'));
-     app.use('/api/customer', require('./routes/customer'));
+  // Routes
+  app.use('/api/auth', authRoutes);
+  app.use('/api/admin', adminRoutes);
+  app.use('/api/owner', ownerRoutes);
+  app.use('/api/trainer', trainerRoutes);
+  app.use('/api/customer', customerRoutes);
+  app.use('/api/notifications', notificationRoutes);
 
-     // Basic Route
-     app.get('/', (req, res) => {
-       res.send('Fitness Website Backend Running');
-     });
-
-     // Start Server
-     const PORT = process.env.PORT || 5000;
-     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

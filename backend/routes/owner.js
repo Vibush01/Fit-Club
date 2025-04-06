@@ -3,6 +3,7 @@ const express = require('express');
   const auth = require('../middleware/auth');
   const User = require('../models/User');
   const Gym = require('../models/Gym');
+  const { createNotification } = require('./notifications');
 
   // Middleware to restrict to owner role
   const ownerOnly = (req, res, next) => {
@@ -88,6 +89,8 @@ const express = require('express');
       }
       trainer.gymId = gym._id;
       await trainer.save();
+      // Send notification to the trainer
+      await createNotification(trainer._id, `You have been added to ${gym.name} as a trainer.`, 'info');
       res.json({ message: 'Trainer added to gym' });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -111,6 +114,8 @@ const express = require('express');
       }
       trainer.gymId = undefined;
       await trainer.save();
+      // Send notification to the trainer
+      await createNotification(trainer._id, `You have been removed from ${gym.name}.`, 'info');
       res.json({ message: 'Trainer removed from gym' });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -131,6 +136,8 @@ const express = require('express');
       }
       member.gymId = gym._id;
       await member.save();
+      // Send notification to the member
+      await createNotification(member._id, `You have been added to ${gym.name} as a member.`, 'info');
       res.json({ message: 'Member added to gym' });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -154,6 +161,8 @@ const express = require('express');
       }
       member.gymId = undefined;
       await member.save();
+      // Send notification to the member
+      await createNotification(member._id, `You have been removed from ${gym.name}.`, 'info');
       res.json({ message: 'Member removed from gym' });
     } catch (err) {
       res.status(500).json({ error: err.message });
