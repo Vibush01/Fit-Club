@@ -197,4 +197,24 @@ const express = require('express');
     }
   });
 
+  // Get Gym Activity Analytics (Number of Members and Trainers)
+  router.get('/analytics/gym-activity', auth, ownerOnly, async (req, res) => {
+    try {
+      const gym = await Gym.findOne({ ownerId: req.user.id });
+      if (!gym) {
+        return res.status(404).json({ error: 'Gym not found' });
+      }
+      const [memberCount, trainerCount] = await Promise.all([
+        User.countDocuments({ gymId: gym._id, role: 'customer' }),
+        User.countDocuments({ gymId: gym._id, role: 'trainer' }),
+      ]);
+      res.json({
+        members: memberCount,
+        trainers: trainerCount,
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   module.exports = router;

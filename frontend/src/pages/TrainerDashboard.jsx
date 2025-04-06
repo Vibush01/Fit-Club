@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react';
   import axios from 'axios';
   import { toast } from 'react-toastify';
   import { useAuth } from '../context/AuthContext';
+  import { Line } from 'react-chartjs-2';
+  import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+
+  // Register Chart.js components
+  ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
   const TrainerDashboard = () => {
     const { user, token } = useAuth();
@@ -9,6 +14,7 @@ import { useState, useEffect } from 'react';
     const [selectedMember, setSelectedMember] = useState(null);
     const [workoutPlan, setWorkoutPlan] = useState(null);
     const [dietPlan, setDietPlan] = useState(null);
+    const [progressData, setProgressData] = useState([]);
     const [weeklyWorkout, setWeeklyWorkout] = useState({
       Monday: [{ name: '', sets: '', reps: '', rest: '' }],
       Tuesday: [{ name: '', sets: '', reps: '', rest: '' }],
@@ -28,6 +34,14 @@ import { useState, useEffect } from 'react';
     useEffect(() => {
       fetchMembers();
     }, []);
+
+    useEffect(() => {
+      if (selectedMember) {
+        fetchProgressData(selectedMember._id);
+      } else {
+        setProgressData([]);
+      }
+    }, [selectedMember]);
 
     const fetchMembers = async () => {
       setLoading(true);
@@ -98,6 +112,17 @@ import { useState, useEffect } from 'react';
         }
         setWorkoutPlan(null);
         setDietPlan(null);
+      }
+    };
+
+    const fetchProgressData = async (userId) => {
+      try {
+        const res = await axios.get(`http://localhost:5000/api/trainer/analytics/customer-progress/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setProgressData(res.data);
+      } catch (err) {
+        toast.error(err.response?.data?.error || 'Failed to fetch customer progress data');
       }
     };
 
@@ -265,6 +290,61 @@ import { useState, useEffect } from 'react';
       }
     };
 
+    // Data for the line chart (Customer Progress)
+    const progressChartData = {
+      labels: progressData.map(entry => new Date(entry.date).toLocaleDateString()),
+      datasets: [
+        {
+          label: 'Weight (kg)',
+          data: progressData.map(entry => entry.weight),
+          borderColor: 'rgba(75, 192, 192, 1)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          fill: false,
+        },
+        {
+          label: 'Body Fat (%)',
+          data: progressData.map(entry => entry.bodyFat),
+          borderColor: 'rgba(255, 99, 132, 1)',
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          fill: false,
+        },
+        {
+          label: 'Muscle Mass (kg)',
+          data: progressData.map(entry => entry.muscleMass),
+          borderColor: 'rgba(54, 162, 235, 1)',
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          fill: false,
+        },
+      ],
+    };
+
+    const progressChartOptions = {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+        title: {
+          display: true,
+          text: selectedMember ? `Progress for ${selectedMember.name}` : 'Customer Progress',
+        },
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Date',
+          },
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Value',
+          },
+        },
+      },
+    };
+
     if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
     return (
@@ -295,6 +375,18 @@ import { useState, useEffect } from 'react';
         {/* Manage Plans */}
         {selectedMember && (
           <div className="space-y-8">
+            {/* Customer Progress Analytics */}
+            <div className="p-4 bg-white rounded-lg shadow">
+              <h2 className="text-xl font-semibold mb-2">Customer Progress Analytics</h2>
+              {progressData.length > 0 ? (
+                <div className="w-full max-w-4xl mx-auto">
+                  <Line data={progressChartData} options={progressChartOptions} />
+                </div>
+              ) : (
+                <p>No progress data available for this customer.</p>
+              )}
+            </div>
+
             {/* Workout Plan */}
             <div className="p-4 bg-white rounded-lg shadow">
               <h2 className="text-xl font-semibold mb-2">Workout Plan for {selectedMember.name}</h2>

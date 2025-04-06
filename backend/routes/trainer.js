@@ -4,6 +4,7 @@ const express = require('express');
   const User = require('../models/User');
   const WorkoutPlan = require('../models/WorkoutPlan');
   const DietPlan = require('../models/DietPlan');
+  const BodyProgress = require('../models/BodyProgress');
   const { createNotification } = require('./notifications');
 
   // Middleware to restrict to trainer role
@@ -247,6 +248,27 @@ const express = require('express');
       // Send notification to the customer
       await createNotification(userId, 'Your trainer has deleted your diet plan.', 'info');
       res.json({ message: 'Diet plan deleted' });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get Customer Progress Analytics (Body Progress Over Time)
+  router.get('/analytics/customer-progress/:userId', auth, trainerOnly, async (req, res) => {
+    const { userId } = req.params;
+    try {
+      const trainer = await User.findById(req.user.id);
+      if (!trainer.gymId) {
+        return res.status(400).json({ error: 'Trainer is not assigned to a gym' });
+      }
+      const member = await User.findById(userId);
+      if (!member || member.role !== 'customer' || member.gymId?.toString() !== trainer.gymId.toString()) {
+        return res.status(400).json({ error: 'User is not a member of your gym' });
+      }
+      const progress = await BodyProgress.find({ userId })
+        .sort({ date: 1 })
+        .select('date weight bodyFat muscleMass');
+      res.json(progress);
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

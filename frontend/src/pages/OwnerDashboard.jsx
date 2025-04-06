@@ -2,12 +2,18 @@ import { useState, useEffect } from 'react';
   import axios from 'axios';
   import { toast } from 'react-toastify';
   import { useAuth } from '../context/AuthContext';
+  import { Bar } from 'react-chartjs-2';
+  import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+
+  // Register Chart.js components
+  ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
   const OwnerDashboard = () => {
     const { user, token } = useAuth();
     const [gyms, setGyms] = useState([]);
     const [trainers, setTrainers] = useState([]);
     const [members, setMembers] = useState([]);
+    const [gymActivity, setGymActivity] = useState({ members: 0, trainers: 0 });
     const [newGym, setNewGym] = useState({ name: '', location: '', images: '' });
     const [editingGym, setEditingGym] = useState(null);
     const [newTrainerEmail, setNewTrainerEmail] = useState('');
@@ -21,9 +27,11 @@ import { useState, useEffect } from 'react';
     useEffect(() => {
       if (gyms.length > 0) {
         fetchTrainersAndMembers();
+        fetchGymActivity();
       } else {
         setTrainers([]);
         setMembers([]);
+        setGymActivity({ members: 0, trainers: 0 });
       }
     }, [gyms]);
 
@@ -55,6 +63,17 @@ import { useState, useEffect } from 'react';
         setMembers(membersRes.data);
       } catch (err) {
         toast.error(err.response?.data?.error || 'Failed to fetch trainers and members');
+      }
+    };
+
+    const fetchGymActivity = async () => {
+      try {
+        const res = await axios.get('http://localhost:5000/api/owner/analytics/gym-activity', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setGymActivity(res.data);
+      } catch (err) {
+        toast.error(err.response?.data?.error || 'Failed to fetch gym activity analytics');
       }
     };
 
@@ -103,6 +122,7 @@ import { useState, useEffect } from 'react';
         });
         fetchGyms();
         fetchTrainersAndMembers();
+        fetchGymActivity();
         toast.success('Gym deleted!');
       } catch (err) {
         toast.error(err.response?.data?.error || 'Failed to delete gym');
@@ -117,6 +137,7 @@ import { useState, useEffect } from 'react';
         });
         setNewTrainerEmail('');
         fetchTrainersAndMembers();
+        fetchGymActivity();
         toast.success('Trainer added to gym!');
       } catch (err) {
         toast.error(err.response?.data?.error || 'Failed to add trainer');
@@ -129,6 +150,7 @@ import { useState, useEffect } from 'react';
           headers: { Authorization: `Bearer ${token}` },
         });
         fetchTrainersAndMembers();
+        fetchGymActivity();
         toast.success('Trainer removed from gym!');
       } catch (err) {
         toast.error(err.response?.data?.error || 'Failed to remove trainer');
@@ -143,6 +165,7 @@ import { useState, useEffect } from 'react';
         });
         setNewMemberEmail('');
         fetchTrainersAndMembers();
+        fetchGymActivity();
         toast.success('Member added to gym!');
       } catch (err) {
         toast.error(err.response?.data?.error || 'Failed to add member');
@@ -155,10 +178,47 @@ import { useState, useEffect } from 'react';
           headers: { Authorization: `Bearer ${token}` },
         });
         fetchTrainersAndMembers();
+        fetchGymActivity();
         toast.success('Member removed from gym!');
       } catch (err) {
         toast.error(err.response?.data?.error || 'Failed to remove member');
       }
+    };
+
+    // Data for the bar chart
+    const gymActivityData = {
+      labels: ['Members', 'Trainers'],
+      datasets: [
+        {
+          label: 'Gym Activity',
+          data: [gymActivity.members, gymActivity.trainers],
+          backgroundColor: ['rgba(75, 192, 192, 0.6)', 'rgba(153, 102, 255, 0.6)'],
+          borderColor: ['rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)'],
+          borderWidth: 1,
+        },
+      ],
+    };
+
+    const gymActivityOptions = {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+        title: {
+          display: true,
+          text: 'Gym Activity Overview',
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Count',
+          },
+        },
+      },
     };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -167,6 +227,16 @@ import { useState, useEffect } from 'react';
       <div className="min-h-screen bg-gray-100 p-6">
         <h1 className="text-3xl font-bold mb-6">Owner Dashboard</h1>
         <p className="mb-4">Welcome, {user.name}!</p>
+
+        {/* Gym Activity Analytics */}
+        {gyms.length > 0 && (
+          <div className="mb-8 p-4 bg-white rounded-lg shadow">
+            <h2 className="text-xl font-semibold mb-2">Gym Activity Analytics</h2>
+            <div className="w-full max-w-md mx-auto">
+              <Bar data={gymActivityData} options={gymActivityOptions} />
+            </div>
+          </div>
+        )}
 
         {/* Manage Gyms */}
         <div className="mb-8 p-4 bg-white rounded-lg shadow">
